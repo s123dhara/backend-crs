@@ -9,10 +9,10 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
   @Post('/add')
-  create(@Body() createUserDto : CreateUserDto) {
+  create(@Body() createUserDto: CreateUserDto) {
     const UserDto = plainToInstance(CreateUserDto, createUserDto);
     console.log(UserDto)
-    
+
     return this.usersService.create(UserDto);
   }
 

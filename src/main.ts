@@ -4,13 +4,20 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import * as cookieParser from 'cookie-parser';
+import { ConfigService } from '@nestjs/config';
+import { SystemConfig } from './config/systemConfig';
+import * as path from 'path';
+
+
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const systemConfig = new SystemConfig(new ConfigService());
+  const PORT = systemConfig.port;
 
   app.enableCors({
-    origin: "http://localhost:5173",
-    credentials : true
+    origin: [systemConfig.clientUri],
+    credentials: true
   })
 
   app.use(cookieParser());
@@ -22,6 +29,21 @@ async function bootstrap() {
   const connection = app.get<Connection>(getConnectionToken());
   connection.on('connected', () => Logger.log('✅ MongoDB connected'));
   connection.on('error', (err) => Logger.error('❌ MongoDB error', err));
-  await app.listen(process.env.PORT ?? 3000);
+
+  await app.listen(PORT, () => {
+    Logger.log(`Server is Running on ${systemConfig.backendUri}`)
+
+    // console.log(systemConfig.mongodbUri)
+    console.log(systemConfig.clientPort)
+    console.log(systemConfig.clientUri)
+    console.log(path.join(__dirname, 'Mailer', 'templates'))
+    console.log(__dirname + '\\Mailer\\templates')
+
+
+
+  });
+
 }
+
+
 bootstrap();

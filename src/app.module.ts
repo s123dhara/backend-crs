@@ -5,20 +5,42 @@ import { UsersModule } from './users/users.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AdminsModule } from './admins/admins.module';
 import { AuthModule } from './auth/auth.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { SystemConfig } from './config/systemConfig';
+
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { EmailService } from './Mailer/EmailService';
+import { UserMailService } from './Mailer/strategies/user.email.service';
+import { AdminEmailService } from './Mailer/strategies/admin.email.service';
+import { RecruiterMailService } from './Mailer/strategies/recruiter.email.service';
+import { EmailModule } from './Mailer/Email.module';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
-    MongooseModule.forRoot('mongodb+srv://spdh427:wOw9EZoA4Ye47t8m@cluster0.wiyn3lh.mongodb.net/crs'),
-    // MongooseModule.forRoot('mongodb://localhost:27017/crs'),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const systemConfig = new SystemConfig(configService);
+        return {
+          uri: systemConfig.mongodbUri
+        }
+      }
+    }),
     UsersModule,
     AdminsModule,
     AuthModule,
     ConfigModule.forRoot({
       isGlobal: true
-    }),   
+    }),
+
+    EmailModule,
+
+    RolesModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, SystemConfig],
 })
 export class AppModule { }

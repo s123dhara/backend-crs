@@ -39,6 +39,18 @@ export class User {
 
     @Prop()
     last_login: Date;
+
+    @Prop({ default: false })
+    two_fa_enabled: boolean
+
+    @Prop({ type: [String], enum: ['EMAIL', 'TOTP'], default: [] })
+    two_fa_methods: string[];
+
+    @Prop()
+    two_fa_secret: string // TOTP secret (Base32)
+
+    @Prop({ default: false })
+    two_fa_verified: boolean
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
