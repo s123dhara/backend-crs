@@ -56,9 +56,8 @@ export class AuthController {
   @Post('/admin/logout')
   async adminLogout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('refresh_token');
-    return { satusCode: HttpStatus.OK, message: "logged out", status: true };
+    return { satusCode: HttpStatus.OK, message: "Successfully Logged out", status: true };
   }
-
 
   @Post('/check')
   async checkAuth(@Req() req: Request, @Res() res: Response) {
@@ -81,16 +80,9 @@ export class AuthController {
         secret: this.configService.get<string>('REFRESH_TOKEN_SECRET') || '',
       });
 
-      // // Remove `exp`, `iat`, etc.
-      // const { exp, iat, ...cleanPayload } = payload;
-
-      // const newAccessToken = await this.jwtService.signAsync(cleanPayload, {
-      //   expiresIn: '15m',
-      // });
-
-      const { status, newAccessToken, updatePayload } = await this.authService.authCheck(payload);
+      const { status, newAccessToken, updatePayload, statusCode, message } = await this.authService.authCheck(payload);
       if (!status) {
-
+        return res.status(statusCode).json({ status, message, isAuthenticated: false })
       }
 
       return res.status(HttpStatus.OK).json({
@@ -105,121 +97,136 @@ export class AuthController {
     }
   }
 
-
-
   @Post('/admin/enable-2fa')
   async enable2FAsetup(@Req() req: Request, @Res() res: Response) {
     // let two_fa_mode;
-    const { password, multifactorAuth } = req.body;
-    let two_fa_mode = multifactorAuth;
+    try {
+      const { password, multifactorAuth } = req.body;
+      let two_fa_mode = multifactorAuth;
 
-    console.log(req.body)
-    const token = req.cookies['refresh_token'];
+      console.log(req.body)
+      const token = req.cookies['refresh_token'];
 
-    if (!token) {
-      return res.status(HttpStatus.UNAUTHORIZED).json({ message: "Unauthorized Access" });
-    }
+      if (!token) {
+        return res.status(HttpStatus.UNAUTHORIZED).json({ message: "Unauthorized Access" });
+      }
 
-    const result = await this.twofaAuthService.enable2faSetup(password, two_fa_mode, token);
-    const { status, message, statusCode, qrCode, secret } = result;
+      const result = await this.twofaAuthService.enable2faSetup(password, two_fa_mode, token);
+      const { status, message, statusCode, qrCode, secret } = result;
 
-    if (!status) {
-      res.status(statusCode).json({ status, message });
-    }
+      if (!status) {
+        res.status(statusCode).json({ status, message });
+      }
 
-    if (qrCode && secret) {
-      res.status(statusCode).json({ qrCode, secret, status, message })
-    } else {
-      res.status(statusCode).json({ status, message });
+      if (qrCode && secret) {
+        res.status(statusCode).json({ qrCode, secret, status, message })
+      } else {
+        res.status(statusCode).json({ status, message });
+      }
+    } catch (error) {
+      console.error('Enable 2fa Error:', error);
+      return res.status(500).json({ status: false, message: "Internal Server Error" });
     }
 
 
   }
-
 
   @Post('/admin/disable-2fa')
   async disable2FAsetup(@Req() req: Request, @Res() res: Response) {
-    // let two_fa_mode;
-    const { password, multifactorAuth } = req.body;
-    let two_fa_mode = multifactorAuth;
 
-    console.log(req.body)
-    const token = req.cookies['refresh_token'];
+    try {
+      const { password, multifactorAuth } = req.body;
+      let two_fa_mode = multifactorAuth;
 
-    if (!token) {
-      return res.status(HttpStatus.UNAUTHORIZED).json({ message: "Unauthorized Access" });
-    }
+      console.log(req.body)
+      const token = req.cookies['refresh_token'];
 
-    const { status, message, statusCode } = await this.twofaAuthService.disable2faSetup(password, two_fa_mode, token);
+      if (!token) {
+        return res.status(HttpStatus.UNAUTHORIZED).json({ message: "Unauthorized Access" });
+      }
 
-    if (!status) {
+      const { status, message, statusCode } = await this.twofaAuthService.disable2faSetup(password, two_fa_mode, token);
+
+      if (!status) {
+        res.status(statusCode).json({ status, message });
+      }
+
       res.status(statusCode).json({ status, message });
+    } catch (error) {
+      console.error('Disable 2fa error:', error);
+      return res.status(500).json({ status: false, message: "Internal Server Error" });
     }
-
-    console.log('succesfull');
-
-    res.status(statusCode).json({ status, message });
 
 
   }
-
 
   @Post('/admin/init-2fa')
   async init2fa(@Req() req: Request, @Res() res: Response) {
     try {
       const { method, user } = req.body;
+      if (!method || !user) {
+        return res.status(401).json({ status: false, message: "Invalid Request" });
+      }
 
-      console.log({
-        method, user
-      });
-
-      const { status, message, satusCode } = await this.twofaAuthService.init2fa(user, method);
-      console.log({
-        status, message
-      })
-      res.status(satusCode).json({ status, message });
+      const { status, message, statusCode } = await this.twofaAuthService.init2fa(user, method);
+      console.log({ status, message, statusCode })
+      res.status(statusCode).json({ status, message });
     } catch (error) {
-
+      res.status(401).json({ status: false, message: "Something went wrong, Please try again later" });
     }
 
   }
 
   @Post('/admin/verify-auth-token')
-  async verify2fa(@Req() req: Request, @Res() res: Response) {
-    const { code, method, user } = req.body;
+  async verify2fa(@Req() req: Request, @Res() res: Response): Promise<Response> {
+    try {
+      const { code, method, user } = req.body;
+      if (!code || !method || !user) {
+        return res.status(401).json({ status: false, message: "Invalid Request" });
+      }
 
-    console.log('verify = ', { code, method, user });
+      const result = await this.twofaAuthService.verifyAuthToken(code, method, user);
 
-    const result = await this.twofaAuthService.verifyAuthToken(code, method, user);
+      console.log({ result });
 
-    console.log({
-      result
-    });
+      if (!result.status || !result.isVerified) {
+        return res.status(401).json({ status: false, message: "Invalid or expired token", isVerified: false });
+      }
 
-    if (result.isVerified) {
       const { access_token, refresh_token } = await this.authService.signToken(user.email, user.two_fa_methods);
 
       res.cookie('refresh_token', refresh_token, {
         httpOnly: true,
-        secure: false, // Set to true in production
+        secure: false, // set to true in production
         sameSite: 'lax',
-        maxAge: 1 * 24 * 60 * 60 * 1000,
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
 
-      res
-        .status(HttpStatus.CREATED)
-        .json({
-          status: true,
-          message: 'Logged In Successfully',
-          user,
-          token: access_token
-        });
+      return res.status(HttpStatus.CREATED).json({
+        status: true,
+        message: 'Logged In Successfully',
+        user,
+        token: access_token,
+      });
 
-    } else {
-      // res.status(200).json({ status: true, isValid: result.isVerified });
-      res.status(400).json({ status: true, message: 'nasdf' });
+    } catch (error) {
+      console.error('2FA Verification Error:', error);
+      return res.status(500).json({ status: false, message: "Internal Server Error" });
     }
-
   }
 
+  @Post('/forgot-password')
+  async forgotPassword(@Req() req: Request, @Res() res: Response) {
+    try {
+      const { email } = req.body;     
+      const { status, statusCode, message } = await this.authService.forgotPassword(email);
+      if (status) {
+        return res.status(200).json({ status: true, message: "true" });
+      } else {
+        return res.status(statusCode).json({ status, message });
+      }
+    } catch (error) {
+      return res.status(500).json({ status: false, message: "Internal Server Error" });
+    }
+  }
 }

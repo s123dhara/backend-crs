@@ -18,9 +18,7 @@ import { EmailService } from "../../Mailer/EmailService";
 @Injectable()
 export class TwoFactorAuthService {
 
-    constructor(@InjectModel(User.name) private userModel: Model<UserDocument>, private jwtService: JwtService, private configService: ConfigService, private otpService: OtpService, private emailService: EmailService) {
-
-    }
+    constructor(@InjectModel(User.name) private userModel: Model<UserDocument>, private jwtService: JwtService, private configService: ConfigService, private otpService: OtpService, private emailService: EmailService) {}
 
     async enable2faSetup(password: string, two_fa_mode: string, token: string): Promise<any> {
 
@@ -54,7 +52,7 @@ export class TwoFactorAuthService {
                     user.two_fa_verified = false; // after logged in make it true
                     await user.save();
 
-                    return { status: true, message: 'TOTP 2FA setup initialized. Email OTP Verification enabled', statusCode: HttpStatus.OK }
+                    return { status: true, message: 'Email OTP Verification enabled', statusCode: HttpStatus.OK }
                 case 'TOTP':
                     const { secret } = await this.generateSecret(email);
                     // Step 2: Save secret to user (but NOT verified yet)
@@ -80,8 +78,7 @@ export class TwoFactorAuthService {
         }
 
     }
-
-
+ 
     async disable2faSetup(password: string, two_fa_mode: string, token: string): Promise<any> {
 
         try {
@@ -143,7 +140,6 @@ export class TwoFactorAuthService {
 
     }
 
-
     async verify2FASetup(user: UserDocument | any, token: string): Promise<any> {
         const isVerified = speakeasy.totp.verify({
             secret: user.two_fa_secret,
@@ -162,17 +158,9 @@ export class TwoFactorAuthService {
     }
 
     async generateSecret(userEmail: string): Promise<any> {
-
-        // const user = await this.userModel.findOne({ email: userEmail });
-        // if (!user) {
-        //     return { status: HttpStatus.BAD_REQUEST, message: 'User not found!', secret: null };
-        // }
-
         const secret = speakeasy.generateSecret({
             name: `${APP_NAME} \n${userEmail}`,
         });
-
-        // const qrCode = await qrcode.toDataURL(secret.otpauth_url ? secret.otpauth_url : "");
         return { secret };
     }
 
@@ -182,53 +170,63 @@ export class TwoFactorAuthService {
     }
 
     async verifyAuthToken(code: string, method: string, user: any): Promise<any> {
-        let isVerified = false;
+        try {
+            let isVerified = false;
 
-        if (method === 'email') {
-            const dbUser = await this.userModel.findOne({ email: user?.email });
-            if (!dbUser) {
-                return {};
+            if (method === 'email') {
+                const dbUser = await this.userModel.findOne({ email: user?.email });
+                if (!dbUser) {
+                    return { status: false };
+                }
+
+
+                //Convert User id from OjbectedId to String to Sava in REDITS-DB
+                const userId = (dbUser._id as any).toString() || null;
+                const storedOtp = await this.otpService.getOtp(userId);
+                isVerified = storedOtp === code;
+
+
+                if (isVerified) await this.otpService.deleteOtp(userId); // cleanup
+
+            } else if (method === 'app') {
+                const dbUser = await this.userModel.findOne({ email: user?.email });
+                if (!dbUser) {
+                    return { status: false, isVerified: false };
+                }
+                const secret = dbUser?.two_fa_secret || ""; // or fetch from DB
+                if (!secret) {
+                    return { status: false, isVerified: false };
+                }
+
+                //cheking the verification
+                isVerified = speakeasy.totp.verify({
+                    secret,
+                    encoding: 'base32',
+                    token: code,
+                    window: 1,
+                });
             }
 
-            const userId = (dbUser._id as any).toString() || null;
-            console.log('id = ', userId);
-            console.log({ id: dbUser?._id, type: typeof (dbUser?._id) });
-
-
-            const storedOtp = await this.otpService.getOtp(userId);
-            console.log('storeotp ', storedOtp);
-            isVerified = storedOtp === code;
-
-            if (isVerified) await this.otpService.deleteOtp(userId); // cleanup
-
-        } else if (method === 'app') {
-            const dbUser = await this.userModel.findOne({ email: user?.email });
-            if (!dbUser) {
-
-            }
-            const secret = dbUser?.two_fa_secret || ""; // or fetch from DB
-
-            isVerified = speakeasy.totp.verify({
-                secret,
-                encoding: 'base32',
-                token: code,
-                window: 1,
-            });
+            return { status: isVerified, isVerified };
+        } catch (error) {
+            return { status: false, isVerified: false };
         }
-
-        return { status: isVerified, isVerified };
     }
 
-    async init2fa(user: any, method: string) {
+    async init2fa(user: any, method: string): Promise<any> {
         try {
             if (method == 'email') {
                 const dbUser = await this.userModel.findOne({ email: user?.email });
                 if (!dbUser) {
-
+                    return { status: false, messsage: "Something went wrong, Please try again later", statusCode: HttpStatus.BAD_REQUEST }
                 }
                 const { status, message } = await this.adminSendEmailOTP(dbUser);
-
-                return { status, message, statusCode: HttpStatus.OK };
+                console.log({ status, message })
+                if (status) {
+                    return { status, message, statusCode: HttpStatus.OK };
+                } else {
+                    return { status: false, messsage: "Something went wrong, Please try again later", statusCode: HttpStatus.BAD_GATEWAY }
+                }
             }
 
             if (method == 'app') {
@@ -245,9 +243,12 @@ export class TwoFactorAuthService {
             const userId = (user._id as any).toString() || null;
             await this.otpService.storeOtp(userId, otp, 300); // 5 mins
 
-            await this.emailService.adminEmailVerificationOtp('spdh427@gmail.com', user.email, otp);
-
-            return { status: true, message: 'OTP sent to email' };
+            const result = await this.emailService.adminEmailVerificationOtp('spdh427@gmail.com', user.email, otp);
+            if (result) {
+                return { status: true, message: 'OTP sent to email' };
+            } else {
+                return { status: false, message: "Failed in OTP sending in Email, Please try again later" }
+            }
         } catch (error) {
             return { status: false, message: "Failed in OTP sending in Email, Please try again later" }
         }

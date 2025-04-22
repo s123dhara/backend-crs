@@ -6,19 +6,21 @@ export class AdminEmailService {
     constructor(private mailerService: MailerService) { }
 
     async sendEmailVerificationOTP(to: string, username: string, otp: string) {
-        await this.mailerService.sendMail({
-            to,
-            subject: 'Campus Recruitment System Security Verification Code',
-            template: 'Admin/OtpVerificationEmail', // ./templates/welcome.hbs
-            context: {
-                username,
-                otp,
-                year : new Date().getFullYear() 
-            },
-        });
 
-        console.log('email sent successfully')
-
-        
+        try {
+            await this.mailerService.sendMail({
+                to,
+                subject: 'Campus Recruitment System Security Verification Code',
+                template: 'Admin/OtpVerificationEmail', // ./templates/welcome.hbs
+                context: {
+                    username,
+                    otp,
+                    year: new Date().getFullYear()
+                },
+            });
+            return true;
+        } catch (error) {
+            return true;
+        }
     }
 }

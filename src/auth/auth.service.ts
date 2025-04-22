@@ -9,10 +9,11 @@ import * as argon2 from 'argon2';
 import { response } from 'express';
 import { ACCRESS_TOKEN_EXPIRE_TIME, REFRESH_TOKEN_EXPIRE_TIME } from '../config/constants';
 import { TwoFactorAuthService } from './2fa/twofactor.auth.service';
+import { EmailService } from '../Mailer/EmailService';
 
 @Injectable()
 export class AuthService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>, private jwtService: JwtService, private configService: ConfigService, private twoFactorAuthService: TwoFactorAuthService) {
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>, private jwtService: JwtService, private configService: ConfigService, private twoFactorAuthService: TwoFactorAuthService, private emailService: EmailService) {
   }
   async adminLogin(dto: AuthDto): Promise<any> {
     const user = await this.userModel.findOne({ email: dto.email });
@@ -34,8 +35,8 @@ export class AuthService {
       email: user.email,
       two_fa_methods: user.two_fa_methods
     }
-    if(user.two_fa_enabled == true) {
-      return { access_token: null, refresh_token: null, status: false, two_fa_auth_enabled : true, user : requiredUserDetails};
+    if (user.two_fa_enabled == true) {
+      return { access_token: null, refresh_token: null, status: false, two_fa_auth_enabled: true, user: requiredUserDetails };
     }
 
     const { access_token, refresh_token } = await this.signToken(user.email, user.two_fa_methods);
@@ -70,7 +71,7 @@ export class AuthService {
     const user = await this.userModel.findOne({ email: cleanPayload?.email });
 
     if (!user) {
-
+      return { status: false, statusCode: HttpStatus.BAD_REQUEST, message: "Auth Checking Failed" };
     }
 
     const updatePayload = {
@@ -86,6 +87,18 @@ export class AuthService {
 
   }
 
+  async forgotPassword(email: string): Promise<any> {
+    const user = await this.userModel.findOne({ email });    
+    if (!user) {
+      return { status: false, statusCode: HttpStatus.BAD_GATEWAY, message: "Not Allowed to Verify" };
+    }
 
+    const result = await this.emailService.userForgetEmailVerification(email);
+    if (result) {
+      return { status: true, statusCode: HttpStatus.OK, message: "Success" };
+    } else {
+      return { status: false, statusCode: HttpStatus.BAD_REQUEST, message: "Failed" };
+    }
+  }
 
 }
