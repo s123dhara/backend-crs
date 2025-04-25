@@ -19,7 +19,7 @@ export class UserMailService {
             });
             return true;
         } catch (error) {
-            return true;
+            return false;
         }
     }
 }

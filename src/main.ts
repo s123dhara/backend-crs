@@ -33,7 +33,6 @@ async function bootstrap() {
   await app.listen(PORT, () => {
     Logger.log(`Server is Running on ${systemConfig.backendUri}`)
 
-    // console.log(systemConfig.mongodbUri)
     console.log(systemConfig.clientPort)
     console.log(systemConfig.clientUri)
     console.log(path.join(__dirname, 'Mailer', 'templates'))
