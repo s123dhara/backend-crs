@@ -12,9 +12,12 @@ import { RedisModule } from '../Redis/redis.module';
 import { OtpService } from './otp/otp.service';
 import { EmailService } from '../Mailer/EmailService';
 import { EmailModule } from '../Mailer/Email.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ApplicantProfile } from '../users/entity';
 
 @Module({
   imports: [MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+  TypeOrmModule.forFeature([ApplicantProfile,]),
     PassportModule,
   JwtModule.registerAsync({
     imports: [ConfigModule],

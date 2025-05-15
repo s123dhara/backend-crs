@@ -8,17 +8,19 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SystemConfig } from './config/systemConfig';
 
-import { MailerModule } from '@nestjs-modules/mailer';
-import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
-import { EmailService } from './Mailer/EmailService';
-import { UserMailService } from './Mailer/strategies/user.email.service';
-import { AdminEmailService } from './Mailer/strategies/admin.email.service';
-import { RecruiterMailService } from './Mailer/strategies/recruiter.email.service';
 import { EmailModule } from './Mailer/Email.module';
 import { RolesModule } from './roles/roles.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { postgresTestUser } from './users/entity/user.entity';
+import { ApplicantProfile } from './users/entity';
+import { join } from 'path';
+
+import { SignalingGateway } from './signaling/signaling.gateway';
+import { RecruiterModule } from './recruiter/recruiter.module';
+import { ApplicationModule } from './application/application.module';
 
 @Module({
-  imports: [
+  imports: [    
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -29,6 +31,21 @@ import { RolesModule } from './roles/roles.module';
         }
       }
     }),
+
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: 'localhost',
+      port: 5432,
+      username: 'postgres',
+      password: '123',
+      database: 'crs',
+      // entities : [ApplicantProfile],
+      entities: [join(__dirname, '**', 'entity', '**', '*.entity.{ts,js}')],
+      // autoLoadEntities: true, // Automatically load entities
+      synchronize: true,      // Auto-create tables (disable in production)
+    }),
+    TypeOrmModule.forFeature([postgresTestUser]),
+
     UsersModule,
     AdminsModule,
     AuthModule,
@@ -39,6 +56,10 @@ import { RolesModule } from './roles/roles.module';
     EmailModule,
 
     RolesModule,
+
+    RecruiterModule,
+
+    ApplicationModule,
   ],
   controllers: [AppController],
   providers: [AppService, SystemConfig],

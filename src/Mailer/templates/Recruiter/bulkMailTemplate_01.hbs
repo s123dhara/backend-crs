@@ -1,0 +1,182 @@
+<style type="text/css">
+    /* Base styles */
+    body,
+    html {
+        margin: 0;
+        padding: 0;
+        font-family: 'Arial', sans-serif;
+        line-height: 1.6;
+        color: #333333;
+        background-color: #f5f5f5;
+    }
+
+    /* Email container */
+    .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+    }
+
+    /* Header */
+    .header {
+        background-color: #1a5276;
+        padding: 30px 20px;
+        text-align: center;
+    }
+
+    .header img {
+        max-width: 180px;
+        height: auto;
+    }
+
+    .header h1 {
+        color: #ffffff;
+        margin: 15px 0 0;
+        font-size: 24px;
+    }
+
+    /* Content */
+    .content {
+        padding: 30px;
+    }
+
+    .greeting {
+        font-size: 18px;
+        margin-bottom: 20px;
+    }
+
+    .job-title {
+        color: #1a5276;
+        font-size: 22px;
+        margin: 20px 0 10px;
+        font-weight: bold;
+    }
+
+    .details {
+        margin: 25px 0;
+    }
+
+    .details p {
+        margin-bottom: 10px;
+    }
+
+    .highlight-box {
+        background-color: #f8f9fa;
+        border-left: 4px solid #1a5276;
+        padding: 15px;
+        margin: 20px 0;
+    }
+
+    .button-container {
+        text-align: center;
+        margin: 30px 0;
+    }
+
+    .apply-button {
+        display: inline-block;
+        background-color: #1a5276;
+        color: #ffffff;
+        text-decoration: none;
+        padding: 12px 25px;
+        border-radius: 4px;
+        font-weight: bold;
+        font-size: 16px;
+    }
+
+    /* Footer */
+    .footer {
+        background-color: #f1f1f1;
+        padding: 20px;
+        text-align: center;
+        font-size: 14px;
+        color: #666666;
+    }
+
+    .social-links a {
+        margin: 0 10px;
+        text-decoration: none;
+    }
+
+    .address {
+        margin-top: 15px;
+        line-height: 1.4;
+    }
+</style>
+
+<div class="email-container">
+    <!-- Header -->
+    <div class="header">
+        <img src="https://example.com/abc-company-logo.png" alt="ABC Company Logo">
+        <h1>Exciting Career Opportunity</h1>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <p class="greeting">Dear {{ email }},</p>
+
+        <p>We were impressed by your profile and would like to invite you to apply for a position at ABC Company, a
+            leader in [industry/brief company description].</p>
+
+        <h2 class="job-title">Senior Software Developer</h2>
+
+        <div class="details">
+            <p><strong>Location:</strong> New York, NY (Hybrid)</p>
+            <p><strong>Employment Type:</strong> Full-time</p>
+            <p><strong>Department:</strong> Technology</p>
+            <p><strong>Salary Range:</strong> $110,000 - $130,000 per year</p>
+        </div>
+
+        <div class="highlight-box">
+            <h3>About the Role:</h3>
+            <p>We're looking for an experienced Software Developer to join our growing team. You'll be responsible
+                for designing, developing, and implementing software solutions that drive our business forward.</p>
+
+            <h3>Key Responsibilities:</h3>
+            <ul>
+                <li>Develop high-quality software design and architecture</li>
+                <li>Collaborate with cross-functional teams to define, design, and ship new features</li>
+                <li>Identify, prioritize and execute tasks in the software development life cycle</li>
+                <li>Review and debug code to optimize performance</li>
+            </ul>
+        </div>
+
+        <div class="button-container">
+            <a href="https://example.com/apply-now" class="apply-button">Apply Now</a>
+        </div>
+
+        <p>We offer competitive compensation, comprehensive benefits, and opportunities for professional growth in a
+            dynamic work environment.</p>
+
+        <p>If you're interested in learning more about this opportunity, please submit your application by
+            [application deadline].</p>
+
+        <p>We look forward to hearing from you!</p>
+
+        <p>Best regards,<br>
+            [Your Name]<br>
+            Talent Acquisition Team<br>
+            {{ company }} Company</p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="social-links">
+            <a href="https://linkedin.com/company/abc">LinkedIn</a>
+            <a href="https://twitter.com/abc">Twitter</a>
+            <a href="https://facebook.com/abc">Facebook</a>
+        </div>
+
+        <div class="address">
+            {{ company }} Company<br>
+            123 Business Avenue, Suite 500<br>
+            New York, NY 10001<br>
+            Phone: (212) 555-1234
+        </div>
+
+        <p style="margin-top: 20px; font-size: 12px;">
+            © {{ year}} {{ company }} Company. All rights reserved.<br>
+            <a href="#" style="color: #666666;">Privacy Policy</a> |
+            <a href="#" style="color: #666666;">Unsubscribe</a>
+        </p>
+    </div>
+</div>

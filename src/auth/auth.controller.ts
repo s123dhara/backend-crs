@@ -10,20 +10,50 @@ import { TwoFactorAuthService } from './2fa/twofactor.auth.service';
 
 
 
+
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService, private jwtService: JwtService, private configService: ConfigService, private twofaAuthService: TwoFactorAuthService) { }
 
+
+  @Post('/login')
+  async login(@Body() dto: AuthDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response) {
+    const { access_token, refresh_token, message, status, statusCode, two_fa_auth_enabled, user } = await this.authService.adminLogin(dto, "APPLICANT");
+
+    if (!status && two_fa_auth_enabled) {
+      res.status(HttpStatus.OK).json({ status, two_fa_auth_enabled, user, });
+    }
+    else if (!status) {
+      res.status(400).json({ status, message });
+    } else {
+
+      res.cookie('refresh_token', refresh_token, {
+        httpOnly: true,
+        secure: false, // Set to true in production
+        sameSite: 'lax',
+        maxAge: 1 * 24 * 60 * 60 * 1000,
+      });
+
+      res
+        .status(HttpStatus.CREATED)
+        .json({
+          message: 'Logged In Successfully',
+          user,
+          token: access_token
+        });
+    }
+  }
+
   @Post('/admin/login')
   async adminLogin(
     @Body() dto: AuthDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    // console.log(dto);
-    const { access_token, refresh_token, message, status, statusCode, two_fa_auth_enabled, user } = await this.authService.adminLogin(dto);
-    console.log(
-      { access_token, refresh_token, message, status, statusCode }
-    )
+    const { access_token, refresh_token, message, status, statusCode, two_fa_auth_enabled, user } = await this.authService.adminLogin(dto, "ADMIN");
 
     if (!status && two_fa_auth_enabled) {
       res.status(HttpStatus.OK).json({ status, two_fa_auth_enabled, user, });
@@ -59,11 +89,44 @@ export class AuthController {
     return { satusCode: HttpStatus.OK, message: "Successfully Logged out", status: true };
   }
 
+  @Post('/recruiter/login')
+  async recruiterLogin(@Req() req: Request, @Res() res: Response) {
+    try {
+      const { email, password, role } = req.body;
+      const data = { email, password };      
+      const { access_token, refresh_token, message, status, statusCode, two_fa_auth_enabled, user } = await this.authService.adminLogin(data, role.toUpperCase());
+      if (!status && two_fa_auth_enabled) {
+        res.status(HttpStatus.OK).json({ status, two_fa_auth_enabled, user, });
+      }
+      else if (!status) {
+        res.status(400).json({ status, message });
+      } else {
+
+        res.cookie('refresh_token', refresh_token, {
+          httpOnly: true,
+          secure: false, // Set to true in production
+          sameSite: 'lax',
+          maxAge: 1 * 24 * 60 * 60 * 1000,
+        });
+
+        res
+          .status(HttpStatus.CREATED)
+          .json({
+            message: 'Logged In Successfully',
+            user,
+            token: access_token
+          });
+      }
+
+    } catch (error) {
+      console.error('Signup Error:', error);
+      return res.status(500).json({ status: false, message: "Internal Server Error" });
+    }
+  }
+
   @Post('/check')
   async checkAuth(@Req() req: Request, @Res() res: Response) {
     const token = req.cookies['refresh_token'];
-    console.log(req.headers.authorization);
-
     /*
     const authorization_token = req.headers.authorization?.split(' ')[1];
     if(!authorization_token) {
@@ -218,7 +281,7 @@ export class AuthController {
   @Post('/forgot-password')
   async forgotPassword(@Req() req: Request, @Res() res: Response) {
     try {
-      const { email } = req.body;     
+      const { email } = req.body;
       const { status, statusCode, message } = await this.authService.forgotPassword(email);
       if (status) {
         return res.status(200).json({ status: true, message: "true" });
@@ -229,4 +292,41 @@ export class AuthController {
       return res.status(500).json({ status: false, message: "Internal Server Error" });
     }
   }
+
+  @Post('/signup')
+  async signup(@Req() req: Request, @Res() res: Response) {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ status: false, message: "Email and password are required" });
+      }
+
+      const { status, message, statusCode } = await this.authService.signup({ email, password, role : "APPLICANT" });
+
+      return res.status(statusCode).json({ status, message });
+
+    } catch (error) {
+      console.error('Signup Error:', error);
+      return res.status(500).json({ status: false, message: "Internal Server Error" });
+    }
+  }
+
+  @Post('/recruiter/signup')
+  async recruiterSignup(@Req() req: Request, @Res() res: Response) {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ status: false, message: "Email and password are required" });
+      }
+
+      const { status, message, statusCode } = await this.authService.signup({ email, password, role : "RECRUITER" });
+
+      return res.status(statusCode).json({ status, message });
+
+    } catch (error) {
+      console.error('Signup Error:', error);
+      return res.status(500).json({ status: false, message: "Internal Server Error" });
+    }
+  }
+
 }

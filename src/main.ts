@@ -7,7 +7,7 @@ import * as cookieParser from 'cookie-parser';
 import { ConfigService } from '@nestjs/config';
 import { SystemConfig } from './config/systemConfig';
 import * as path from 'path';
-
+import * as express from 'express';
 
 
 async function bootstrap() {
@@ -15,8 +15,11 @@ async function bootstrap() {
   const systemConfig = new SystemConfig(new ConfigService());
   const PORT = systemConfig.port;
 
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
   app.enableCors({
-    origin: [systemConfig.clientUri],
+    origin: [systemConfig.clientUri, "http://localhost:3000"],
     credentials: true
   })
 
@@ -32,16 +35,7 @@ async function bootstrap() {
 
   await app.listen(PORT, () => {
     Logger.log(`Server is Running on ${systemConfig.backendUri}`)
-
-    console.log(systemConfig.clientPort)
-    console.log(systemConfig.clientUri)
-    console.log(path.join(__dirname, 'Mailer', 'templates'))
-    console.log(__dirname + '\\Mailer\\templates')
-
-
-
   });
-
 }
 
 
